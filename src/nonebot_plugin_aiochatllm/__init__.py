@@ -1,7 +1,11 @@
 from typing import Any
 
-from arclet.alconna import config as alc_config
 from nonebot import get_plugin_config, on_message, require
+
+require("nonebot_plugin_alconna")
+require("nonebot_plugin_uninfo")
+
+from arclet.alconna import config as alc_config
 from nonebot.adapters import Event
 from nonebot.plugin import PluginMetadata, inherit_supported_adapters
 from nonebot.rule import to_me
@@ -20,8 +24,6 @@ from nonebot_plugin_uninfo import Uninfo
 from .chat_mgr import ChatManager
 from .config import Config
 from .tools.censor import AliyunCensor
-
-require("nonebot_plugin_alconna")
 
 __plugin_meta__ = PluginMetadata(
     name="nonebot-plugin-aiochatllm",

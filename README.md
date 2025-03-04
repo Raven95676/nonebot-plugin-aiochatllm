@@ -29,9 +29,9 @@ _✨ 多合一LLM聊天插件 ✨_
 
 ## 项目依赖
 
-[nonebot-plugin-alconna](https://github.com/nonebot/plugin-alconna)
-[nonebot-plugin-localstore](https://github.com/nonebot/plugin-localstore)
-[nonebot-plugin-uninfo](https://github.com/RF-Tar-Railt/nonebot-plugin-uninfo)
+- [nonebot-plugin-alconna](https://github.com/nonebot/plugin-alconna)
+- [nonebot-plugin-localstore](https://github.com/nonebot/plugin-localstore)
+- [nonebot-plugin-uninfo](https://github.com/RF-Tar-Railt/nonebot-plugin-uninfo)
 
 ## 介绍
 
