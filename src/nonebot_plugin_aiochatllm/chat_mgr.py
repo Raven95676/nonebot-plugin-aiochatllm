@@ -199,6 +199,8 @@ class ChatSession:
 
     def add_global_context(self, message: str) -> None:
         """添加全局上下文"""
+        if not message:
+            return
         logger.debug(f"添加全局上下文: {self.user_name}: {message}")
         self.global_context.append(f"{self.user_name}: {message}")
 
