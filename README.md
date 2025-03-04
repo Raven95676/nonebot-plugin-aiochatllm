@@ -12,7 +12,7 @@ _✨ 多合一LLM聊天插件 ✨_
 
 
 <a href="./LICENSE">
-    <img src="https://img.shields.io/github/license/owner/nonebot-plugin-aiochatllm.svg" alt="license">
+    <img alt="GitHub License" src="https://img.shields.io/github/license/Raven95676/nonebot-plugin-aiochatllm">
 </a>
 <a href="https://pypi.python.org/pypi/nonebot-plugin-aiochatllm">
     <img src="https://img.shields.io/pypi/v/nonebot-plugin-aiochatllm.svg" alt="pypi">
