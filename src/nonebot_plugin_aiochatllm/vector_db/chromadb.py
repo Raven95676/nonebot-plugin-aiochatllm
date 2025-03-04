@@ -9,11 +9,9 @@ import nonebot_plugin_localstore as store
 import numpy as np
 from chromadb.api.models.Collection import Collection
 from chromadb.api.types import Documents, EmbeddingFunction, Embeddings, GetResult, QueryResult
-from nonebot import logger, require
+from nonebot import logger
 
 from .base import VectorMethod
-
-require("nonebot_plugin_localstore")
 
 
 class OpenAILikeEmbed(EmbeddingFunction):

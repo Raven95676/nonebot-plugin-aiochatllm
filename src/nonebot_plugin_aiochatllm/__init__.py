@@ -4,6 +4,7 @@ from nonebot import get_plugin_config, on_message, require
 
 require("nonebot_plugin_alconna")
 require("nonebot_plugin_uninfo")
+require("nonebot_plugin_localstore")
 
 from arclet.alconna import config as alc_config
 from nonebot.adapters import Event
