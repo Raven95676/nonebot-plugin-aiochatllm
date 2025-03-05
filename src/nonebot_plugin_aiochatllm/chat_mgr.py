@@ -2,6 +2,7 @@ import asyncio
 import time
 from collections import deque
 from contextlib import suppress
+from datetime import datetime
 from typing import Any
 
 import httpx
@@ -55,7 +56,7 @@ class ChatSession:
             messages.append(
                 {
                     "role": "system",
-                    "content": f"You are talking with a user (ID: {self.user_id} ) named {self.user_name}, who would normally address you as {self.nickname} . Here are your settings. If the setting mentions asking you to play as someone, or if the setting mentions a name, the name in the setting is preferred:\n {self._get_system_prompt()} ",  # noqa: E501
+                    "content": f"Now it's {datetime.now().strftime("%Y-%m-%dT%H:%MZ")} . You are talking with a user (ID: {self.user_id} ) named {self.user_name}, who would normally address you as {self.nickname} . Here are your settings. If the setting mentions asking you to play as someone, or if the setting mentions a name, the name in the setting is preferred:\n {self._get_system_prompt()} ",  # noqa: E501
                 }
             )
             messages.extend(self.context)
@@ -249,6 +250,10 @@ class ChatManager:
                 user_id=user_id, source_id=source_id, config=self.config, user_name=user_name
             )
             return self.sessions[source_id]
+
+    def get_session(self, source_id: str) -> ChatSession | None:
+        """获取现有会话(不创建新会话)"""
+        return self.sessions.get(source_id)
 
     def list_sessions(self) -> list[str]:
         """列出所有活跃会话ID"""

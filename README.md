@@ -39,6 +39,8 @@ _✨ 多合一LLM聊天插件 ✨_
 
 ## 安装
 
+前置步骤：将`pyproject.toml`内的`3.9`修改为`3.10`。
+
 <details open>
 <summary>使用 nb-cli 安装</summary>
 在 nonebot2 项目的根目录下打开命令行, 输入以下指令即可安装

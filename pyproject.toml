@@ -14,13 +14,15 @@ dependencies = [
     "nonebot-plugin-localstore>=0.7.4", 
     "nonebot-plugin-uninfo>=0.6.10", 
     "httpx>=0.28.1", 
-    "chromadb>=0.6.3"
+    "chromadb>=0.6.3", 
+    "numpy>=2.2.3"
 ]
 
 [tool.nonebot]
 adapters = [
     { name = "OneBot V11", module_name = "nonebot.adapters.onebot.v11" },
-    { name = "Telegram", module_name = "nonebot.adapters.telegram" }
+    { name = "Telegram", module_name = "nonebot.adapters.telegram" },
+    { name = "Console", module_name = "nonebot.adapters.console" }
 ]
 plugins = ["nonebot_plugin_alconna","nonebot_plugin_localstore","nonebot_plugin_uninfo"]
 plugin_dirs = ["src"]
@@ -34,7 +36,7 @@ includes = ["src/nonebot_plugin_aiochatllm"]
 line-length = 120
 target-version = "py310"
 select = ["E", "F", "I", "W", "N", "B", "C4", "UP", "ANN", "RUF"]
-ignore = ["ANN101","ANN401","RUF001"]
+ignore = ["ANN101","ANN401","RUF001","E402"]
 unfixable = ["F401"]
 
 [tool.mypy]
