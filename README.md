@@ -32,6 +32,7 @@ _✨ 多合一LLM聊天插件 ✨_
 - [nonebot-plugin-alconna](https://github.com/nonebot/plugin-alconna)
 - [nonebot-plugin-localstore](https://github.com/nonebot/plugin-localstore)
 - [nonebot-plugin-uninfo](https://github.com/RF-Tar-Railt/nonebot-plugin-uninfo)
+- [nonebot-plugin-apscheduler](https://github.com/nonebot/plugin-apscheduler)
 
 ## 介绍
 

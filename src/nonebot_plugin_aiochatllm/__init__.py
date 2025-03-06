@@ -5,6 +5,7 @@ from nonebot import get_plugin_config, on_message, require
 require("nonebot_plugin_alconna")
 require("nonebot_plugin_uninfo")
 require("nonebot_plugin_localstore")
+require("nonebot_plugin_apscheduler")
 
 from arclet.alconna import config as alc_config
 from nonebot.adapters import Event
@@ -89,7 +90,6 @@ async def handle_chat_message(event: Event, unisession: Uninfo) -> None:
     user_id, source_id, user_name = await get_session_info(unisession)
     input_text = event.get_plaintext()
 
-    chat_mgr = ChatManager(config_dict)
     chat_session = chat_mgr.create_or_get_session(user_id=user_id, source_id=source_id, user_name=user_name)
 
     out = await chat_session.add_message(input_text)
@@ -106,12 +106,12 @@ async def handle_chat_message(event: Event, unisession: Uninfo) -> None:
 
 @message_store.handle()
 async def handle_message_store(event: Event, unisession: Uninfo) -> None:
-    user_id, source_id, user_name = await get_session_info(unisession)
+    _, source_id, user_name = await get_session_info(unisession)
     input_text = event.get_plaintext()
+    chat_session = chat_mgr.get_session(source_id=source_id)
 
-    chat_mgr = ChatManager(config_dict)
-    chat_session = chat_mgr.create_or_get_session(user_id=user_id, source_id=source_id, user_name=user_name)
-    chat_session.add_global_context(input_text)
+    if chat_session:
+        chat_session.add_global_context(f"{user_name}说：{input_text}")
 
 
 ns = Namespace("aiochatllm", disable_builtin_options=set())
@@ -133,23 +133,30 @@ aiochatllm = on_alconna(
 
 
 @aiochatllm.assign("set-preset")
-async def set_preset(preset_name: Match[str], unisession: Uninfo, chat_mgr: ChatManager = chat_mgr) -> None:
+async def set_preset(preset_name: Match[str], unisession: Uninfo) -> None:
     if not preset_name.available:
         await UniMessage.text("请输入预设名称").send()
         return
-    user_id, source_id, user_name = await get_session_info(unisession)
-    chat_session = chat_mgr.create_or_get_session(user_id=user_id, source_id=source_id, user_name=user_name)
-    if chat_session.set_preset(preset_name.result):
-        await UniMessage.text(f"已切换至预设: {preset_name.result}").send()
+    source_id = f"{unisession.scope}_{unisession.scene.type.name}_{unisession.scene.id}"
+    chat_session = chat_mgr.get_session(source_id=source_id)
+    if chat_session:
+        if chat_session.set_preset(preset_name.result):
+            await UniMessage.text(f"已切换至预设: {preset_name.result}").send()
+            return
+        await UniMessage.text(f"预设: {preset_name.result} 不存在").send()
         return
-    await UniMessage.text(f"预设: {preset_name.result} 不存在").send()
+    await UniMessage.text("会话不存在，请先与Bot对话以创建会话").send()
     return
 
 
+
 @aiochatllm.assign("clear-context")
-async def clear_context(unisession: Uninfo, chat_mgr: ChatManager = chat_mgr) -> None:
-    user_id, source_id, user_name = await get_session_info(unisession)
-    chat_session = chat_mgr.create_or_get_session(user_id=user_id, source_id=source_id, user_name=user_name)
-    chat_session.clear_context()
-    await UniMessage.text("已清空上下文").send()
+async def clear_context(unisession: Uninfo) -> None:
+    source_id = f"{unisession.scope}_{unisession.scene.type.name}_{unisession.scene.id}"
+    chat_session = chat_mgr.get_session(source_id=source_id)
+    if chat_session:
+        chat_session.clear_context()
+        await UniMessage.text("已清空上下文").send()
+        return
+    await UniMessage.text("会话不存在，无需清空").send()
     return
