@@ -32,12 +32,15 @@ _✨ 多合一LLM聊天插件 ✨_
 - [nonebot-plugin-alconna](https://github.com/nonebot/plugin-alconna)
 - [nonebot-plugin-localstore](https://github.com/nonebot/plugin-localstore)
 - [nonebot-plugin-uninfo](https://github.com/RF-Tar-Railt/nonebot-plugin-uninfo)
+- [nonebot-plugin-apscheduler](https://github.com/nonebot/plugin-apscheduler)
 
 ## 介绍
 
 本插件为Bot提供LLM聊天服务，包含输出内容审核、长期记忆。
 
 ## 安装
+
+前置步骤：将`pyproject.toml`内的`3.9`修改为`3.10`。
 
 <details open>
 <summary>使用 nb-cli 安装</summary>
