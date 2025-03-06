@@ -18,6 +18,7 @@ from nonebot_plugin_alconna import (
     Match,
     Namespace,
     Option,
+    Subcommand,
     on_alconna,
 )
 from nonebot_plugin_alconna.uniseg import UniMessage
@@ -118,11 +119,17 @@ alc_config.namespaces["aiochatllm"] = ns
 aiochatllm = on_alconna(
     Alconna(
         "aiochatllm",
-        Option("set-preset", Args["preset_name#预设名称", str], help_text="切换预设"),
+        Subcommand(
+            "preset",
+            Option("list", help_text="列出所有预设"),
+            Option("set", Args["preset_name#预设名称", str], help_text="切换预设"),
+            help_text="预设管理",
+        ),
         Option("clear-context", help_text="清空上下文"),
         namespace=alc_config.namespaces["aiochatllm"],
-        meta=CommandMeta(description="多合一LLM聊天插件"),
+        meta=CommandMeta(description="aiochatllm插件管理"),
     ),
+    aliases={"llm"},
     use_cmd_start=True,
     skip_for_unmatch=False,
     priority=25,
@@ -130,7 +137,14 @@ aiochatllm = on_alconna(
 )
 
 
-@aiochatllm.assign("set-preset")
+@aiochatllm.assign("preset.list")
+async def list_presets() -> None:
+    presets = "\n".join(preset for preset in config.chat.presets.keys())
+    await UniMessage.text(f"当前预设列表：\n{presets}").send()
+    return
+
+
+@aiochatllm.assign("preset.set")
 async def set_preset(preset_name: Match[str], unisession: Uninfo) -> None:
     if not preset_name.available:
         await UniMessage.text("请输入预设名称").send()
