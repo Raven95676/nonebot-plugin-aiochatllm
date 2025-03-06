@@ -106,12 +106,10 @@ async def handle_chat_message(event: Event, unisession: Uninfo) -> None:
 
 @message_store.handle()
 async def handle_message_store(event: Event, unisession: Uninfo) -> None:
-    _, source_id, user_name = await get_session_info(unisession)
+    user_id, source_id, user_name = await get_session_info(unisession)
     input_text = event.get_plaintext()
-    chat_session = chat_mgr.get_session(source_id=source_id)
-
-    if chat_session:
-        chat_session.add_global_context(f"{user_name}说：{input_text}")
+    chat_session = chat_mgr.create_or_get_session(user_id=user_id, source_id=source_id, user_name=user_name)
+    chat_session.add_global_context(f"User named {user_name}(ID:{user_id})said: {input_text}")
 
 
 ns = Namespace("aiochatllm", disable_builtin_options=set())
@@ -147,7 +145,6 @@ async def set_preset(preset_name: Match[str], unisession: Uninfo) -> None:
         return
     await UniMessage.text("会话不存在，请先与Bot对话以创建会话").send()
     return
-
 
 
 @aiochatllm.assign("clear-context")

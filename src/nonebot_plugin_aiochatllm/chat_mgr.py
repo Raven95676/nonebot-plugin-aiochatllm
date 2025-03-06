@@ -37,7 +37,7 @@ class ChatSession:
         except StopIteration:
             self.nickname = "Bot"
         self.last_activity = int(time.time() * 1000)
-        logger.debug(f"为来自于{source_id} 的 {user_id} 初始化 ChatSession")
+        logger.debug(f"为来自于 {source_id} 的 {user_id} 初始化 ChatSession")
 
     def _get_system_prompt(self) -> str:
         """获取当前角色的系统提示"""
@@ -57,13 +57,17 @@ class ChatSession:
             messages.append(
                 {
                     "role": "system",
-                    "content": f"Now it's {datetime.now().strftime('%Y-%m-%dT%H:%MZ')} . You are talking with a user (ID: {self.user_id} ) named {self.user_name}, who would normally address you as {self.nickname} . Here are your settings. If the setting mentions asking you to play as someone, or if the setting mentions a name, the name in the setting is preferred:\n {self._get_system_prompt()} ",  # noqa: E501
+                    "content": f"Now it's {datetime.now().strftime('%Y-%m-%dT%H:%MZ')}. You're talking with users now. They normally address you as {self.nickname}. Here are your settings. If the setting mentions asking you to play as someone, or if the setting mentions a name, the name in the setting is preferred:\n {self._get_system_prompt()} ",  # noqa: E501
                 }
             )
             messages.extend(self.context)
-            messages.append({"role": "user", "content": prompt})
+            messages.append(
+                {"role": "user", "content": f"User named {self.user_name}(ID:{self.user_id})said: {prompt}"}
+            )
         else:
             messages.append({"role": "user", "content": prompt})
+
+        logger.debug(messages)
 
         payload = {"model": self.config[mode]["model_name"], "messages": messages, "stream": False}
         headers = {
@@ -157,7 +161,7 @@ class ChatSession:
                             if summary:
                                 self.context = deque(
                                     [
-                                        {"role": "user", "content": "总结我们之前的对话"},
+                                        {"role": "user", "content": "Summarize our previous conversation."},
                                         {"role": "assistant", "content": summary},
                                     ],
                                     maxlen=self.max_context_rounds * 2,
@@ -206,6 +210,10 @@ class ChatSession:
         logger.debug(f"添加全局上下文: {message}")
         self.global_context.append(f"{message}")
 
+    def update_user_info(self, user_name: str, user_id: str) -> None:
+        self.user_name = user_name
+        self.user_id = user_id
+
     async def cleanup_resources(self) -> None:
         """清理会话所有资源"""
         if self.processing_task and not self.processing_task.done():
@@ -248,12 +256,7 @@ class ChatManager:
         if source_id in self.sessions:
             existing_session = self.sessions[source_id]
             if existing_session.user_id != user_id:
-                self.sessions[source_id] = ChatSession(
-                    user_id=user_id,
-                    source_id=source_id,
-                    config=self.config,
-                    user_name=existing_session.user_name or user_name,
-                )
+                existing_session.update_user_info(user_id, user_name)
             return self.sessions[source_id]
         else:
             self.sessions[source_id] = ChatSession(
@@ -262,7 +265,7 @@ class ChatManager:
             return self.sessions[source_id]
 
     def get_session(self, source_id: str) -> ChatSession | None:
-        """获取现有会话(不创建新会话)"""
+        """获取现有会话(不创建新会话,不更新用户信息)"""
         return self.sessions.get(source_id)
 
     def list_sessions(self) -> list[str]:
@@ -283,7 +286,8 @@ class ChatManager:
         """清除所有会话"""
         self.sessions.clear()
 
-@scheduler.scheduled_job("cron", minute="*/1", id="chat_cleanup_job")
+
+@scheduler.scheduled_job("cron", hour="*/2", id="chat_cleanup_job")
 async def cleanup_sessions() -> None:
     """清理不活跃会话"""
     chat_manager = ChatManager._instance
@@ -292,11 +296,10 @@ async def cleanup_sessions() -> None:
         return
 
     now = int(time.time() * 1000)
-    inactive_threshold = 1 * 60 * 1000 # 6小时
+    inactive_threshold = 6 * 60 * 60 * 1000  # 6小时
 
     expired_sessions = [
-        sid for sid, session in chat_manager.sessions.items()
-        if now - session.last_activity > inactive_threshold
+        sid for sid, session in chat_manager.sessions.items() if now - session.last_activity > inactive_threshold
     ]
 
     for sid in expired_sessions:
