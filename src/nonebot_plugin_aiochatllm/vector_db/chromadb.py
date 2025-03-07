@@ -74,6 +74,17 @@ class ChromaDBVector(VectorMethod):
             raise RuntimeError from e
         return collection
 
+    def get_collection(self, collection_name: str) -> Collection | None:
+        """获取ChromaDB集合"""
+        try:
+            collection = self.chroma_client.get_collection(
+                name=collection_name, embedding_function=OpenAILikeEmbed(**self.config["embed"])
+            )
+            return collection
+        except Exception as e:
+            logger.error(f"获取ChromaDB集合时出现错误: {e!s}")
+            return None
+
     def drop_collection(self, collection_name: str) -> bool:
         """删除ChromaDB集合"""
         try:
