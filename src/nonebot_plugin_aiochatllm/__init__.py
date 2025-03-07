@@ -75,8 +75,8 @@ if config.censor.access_key_id and config.censor.access_key_secret:
     censor = AliyunCensor(config_dict["censor"])
 
 chat_mgr = ChatManager(config_dict)
-chat = on_message(rule=to_me(), priority=35, block=True)
-message_store = on_message(priority=30, block=False)
+chat = on_message(rule=to_me(), priority=30, block=False)
+message_store = on_message(priority=35, block=False)
 
 
 async def get_session_info(unisession: Uninfo) -> tuple[str, str, str]:
