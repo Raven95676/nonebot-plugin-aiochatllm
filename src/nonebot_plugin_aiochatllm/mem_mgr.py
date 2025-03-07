@@ -14,10 +14,7 @@ class MemoryManager:
         """初始化记忆管理器"""
         self.user_id = user_id
         self.config = config
-        self.chromadb = ChromaDBVector(user_id=user_id, config=config)
-        self.collection = self.chromadb.create_or_get_collection(
-            collection_name=f"{user_id}_memories", schema={"description": f"Memories for {user_id}"}
-        )
+        self.chromadb = ChromaDBVector(config=config)
 
     async def _call_llm(self, prompt: str) -> str:
         """调用LLM"""
@@ -152,11 +149,14 @@ class MemoryManager:
 
     async def update(self, content: str) -> None:
         """更新记忆"""
+        collection = self.chromadb.create_or_get_collection(
+            collection_name=f"{self.user_id}_memories", schema={"description": f"Memories for {self.user_id}"}
+        )
 
-        similar_memories = self.chromadb.query_memories(collection=self.collection, top_k=15, data=[content])
+        similar_memories = self.chromadb.query_memories(collection=collection, top_k=15, data=[content])
 
         if not similar_memories:
-            self.chromadb.insert_memories(collection=self.collection, data=[content])
+            self.chromadb.insert_memories(collection=collection, data=[content])
             return
 
         decision = await self._decide_memory_action(content, similar_memories)
@@ -175,38 +175,38 @@ class MemoryManager:
         if decision.startswith("MERGE_"):
             target_id = extract_target_id("MERGE_")
             if not target_id:
-                self.chromadb.insert_memories(collection=self.collection, data=[content])
+                self.chromadb.insert_memories(collection=collection, data=[content])
                 return
 
-            target_memories = self.chromadb.get_memories(collection=self.collection, memory_ids=[target_id])
+            target_memories = self.chromadb.get_memories(collection=collection, memory_ids=[target_id])
             if not target_memories:
                 logger.warning(f"合并目标 {target_id} 未找到,插入新记忆")
-                self.chromadb.insert_memories(collection=self.collection, data=[content])
+                self.chromadb.insert_memories(collection=collection, data=[content])
                 return
 
             target_doc = target_memories[0].get("document")
             if not target_doc:
                 logger.warning(f"合并目标 {target_id} 没有内容,插入新记忆")
-                self.chromadb.insert_memories(collection=self.collection, data=[content])
+                self.chromadb.insert_memories(collection=collection, data=[content])
                 return
 
             merged_content = await self._merge_memories(str(target_doc), content)
             if not self.chromadb.update_memories(
-                collection=self.collection, memory_ids=[target_id], data=[merged_content]
+                collection=collection, memory_ids=[target_id], data=[merged_content]
             ):
                 logger.error(f"未能合并 {target_id} ,插入新记忆")
-                self.chromadb.insert_memories(collection=self.collection, data=[content])
+                self.chromadb.insert_memories(collection=collection, data=[content])
                 return
 
         elif decision.startswith("UPDATE_"):
             target_id = extract_target_id("UPDATE_")
             if not target_id:
-                self.chromadb.insert_memories(collection=self.collection, data=[content])
+                self.chromadb.insert_memories(collection=collection, data=[content])
                 return
 
-            if not self.chromadb.update_memories(collection=self.collection, memory_ids=[target_id], data=[content]):
+            if not self.chromadb.update_memories(collection=collection, memory_ids=[target_id], data=[content]):
                 logger.warning(f"更新 {target_id} 错误,插入新记忆")
-                self.chromadb.insert_memories(collection=self.collection, data=[content])
+                self.chromadb.insert_memories(collection=collection, data=[content])
                 return
 
         elif decision.startswith("DELETE_"):
@@ -214,16 +214,23 @@ class MemoryManager:
             if not target_id:
                 return
 
-            if not self.chromadb.delete_memories(collection=self.collection, memory_ids=[target_id]):
+            if not self.chromadb.delete_memories(collection=collection, memory_ids=[target_id]):
                 logger.error(f"未能删除 {target_id}")
 
         else:
-            self.chromadb.insert_memories(collection=self.collection, data=[content])
+            self.chromadb.insert_memories(collection=collection, data=[content])
 
     async def get(self, user_input: str) -> list[str]:
         """获取记忆"""
-        similar_memories = self.chromadb.query_memories(collection=self.collection, top_k=15, data=[user_input])
+        collection = self.chromadb.create_or_get_collection(
+            collection_name=f"{self.user_id}_memories", schema={"description": f"Memories for {self.user_id}"}
+        )
+        similar_memories = self.chromadb.query_memories(collection=collection, top_k=15, data=[user_input])
         memory_list = [
             f"Memory {m['id']} (similarity: {m.get('distance', 0):.4f}): {m['document']}" for m in similar_memories
         ]
+        logger.debug(str(self.chromadb.list_collections()))
         return memory_list
+
+    def update_user_info(self, user_id: str) -> None:
+        self.user_id = user_id

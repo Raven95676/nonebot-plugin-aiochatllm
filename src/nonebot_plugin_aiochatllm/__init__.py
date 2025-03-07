@@ -1,3 +1,4 @@
+from math import ceil
 from typing import Any
 
 from nonebot import get_plugin_config, on_message, require
@@ -15,6 +16,7 @@ from nonebot_plugin_alconna import (
     Alconna,
     Args,
     CommandMeta,
+    Field,
     Match,
     Namespace,
     Option,
@@ -27,6 +29,7 @@ from nonebot_plugin_uninfo import Uninfo
 from .chat_mgr import ChatManager
 from .config import Config
 from .tools.censor import AliyunCensor
+from .vector_db.chromadb import ChromaDBVector
 
 __plugin_meta__ = PluginMetadata(
     name="nonebot-plugin-aiochatllm",
@@ -74,9 +77,12 @@ if config.censor.access_key_id and config.censor.access_key_secret:
     }
     censor = AliyunCensor(config_dict["censor"])
 
+if config_dict.get("summary") and config_dict.get("embed"):
+    chromadb = ChromaDBVector(config=config_dict)
+
 chat_mgr = ChatManager(config_dict)
-chat = on_message(rule=to_me(), priority=35, block=True)
-message_store = on_message(priority=30, block=False)
+chat = on_message(rule=to_me(), priority=30, block=False)
+message_store = on_message(priority=35, block=False)
 
 
 async def get_session_info(unisession: Uninfo) -> tuple[str, str, str]:
@@ -122,8 +128,24 @@ aiochatllm = on_alconna(
         Subcommand(
             "preset",
             Option("list", help_text="列出所有预设"),
-            Option("set", Args["preset_name#预设名称", str], help_text="切换预设"),
+            Option(
+                "set",
+                Args["preset_name#预设名称", str, Field(completion=lambda: "请输入预设名称")],
+                help_text="切换预设",
+            ),
             help_text="预设管理",
+        ),
+        Subcommand(
+            "memory",
+            Option("list", Args["page?#页码", str], help_text="列出所有记忆"),
+            Option(
+                "add",
+                Args["mem_content#记忆内容", str, Field(completion=lambda: "请输入记忆内容")],
+                help_text="添加记忆",
+            ),
+            Option("del", Args["mem_id#记忆ID", str, Field(completion=lambda: "请输入记忆ID")], help_text="删除记忆"),
+            Option("clear", help_text="记忆清除"),
+            help_text="记忆管理",
         ),
         Option("clear-context", help_text="清空上下文"),
         namespace=alc_config.namespaces["aiochatllm"],
@@ -131,6 +153,7 @@ aiochatllm = on_alconna(
     ),
     aliases={"llm"},
     use_cmd_start=True,
+    comp_config={"lite": True},
     skip_for_unmatch=False,
     priority=25,
     block=True,
@@ -149,15 +172,123 @@ async def set_preset(preset_name: Match[str], unisession: Uninfo) -> None:
     if not preset_name.available:
         await UniMessage.text("请输入预设名称").send()
         return
+
     source_id = f"{unisession.scope}_{unisession.scene.type.name}_{unisession.scene.id}"
     chat_session = chat_mgr.get_session(source_id=source_id)
+
     if chat_session:
         if chat_session.set_preset(preset_name.result):
             await UniMessage.text(f"已切换至预设: {preset_name.result}").send()
             return
         await UniMessage.text(f"预设: {preset_name.result} 不存在").send()
         return
+
     await UniMessage.text("会话不存在，请先与Bot对话以创建会话").send()
+    return
+
+
+@aiochatllm.assign("memory.list")
+async def list_memories(unisession: Uninfo, page: Match[str]) -> None:
+    if not chromadb:
+        await UniMessage.text("记忆系统未开启").send()
+        return
+
+    user_id = f"{unisession.scope}_{unisession.user.id}"
+    collection = chromadb.get_collection(collection_name=f"{user_id}_memories")
+
+    if not collection:
+        await UniMessage.text("未获取到记忆库").send()
+        return
+
+    current_count = collection.count()
+    if current_count == 0:
+        await UniMessage.text("没有记忆").send()
+        return
+
+    page_num = int(page.result) if page.available else 1
+    total_pages = ceil(current_count / 10)
+
+    if page_num > total_pages:
+        await UniMessage.text(f"页码超出范围，总页数: {total_pages}").send()
+        return
+
+    offset = (page_num - 1) * 10
+    memories = chromadb.list_memories(collection=collection, limit=10, offset=offset)
+
+    if not memories:
+        await UniMessage.text("没有记忆").send()
+        return
+
+    memory_list = [f"ID {m['id']}: {m['document']}" for m in memories]
+    mem = "\n".join(memory_list)
+
+    await UniMessage.text(f"当前记忆：\n{mem}\n\n第 {page_num}/{total_pages} 页\n使用list [页码]查看更多记忆").send()
+    return
+
+
+@aiochatllm.assign("memory.add")
+async def add_memory(mem_content: Match[str], unisession: Uninfo) -> None:
+    if not chromadb:
+        await UniMessage.text("记忆系统未开启").send()
+        return
+
+    user_id = f"{unisession.scope}_{unisession.user.id}"
+    collection = chromadb.get_collection(collection_name=f"{user_id}_memories")
+
+    if not collection:
+        await UniMessage.text("未获取到记忆库").send()
+        return
+
+    if not mem_content.available:
+        await UniMessage.text("请输入记忆内容").send()
+        return
+
+    if chromadb.insert_memories(collection=collection, data=[mem_content.result]):
+        await UniMessage.text("已添加记忆").send()
+        return
+
+    await UniMessage.text("添加记忆时出现错误").send()
+    return
+
+
+@aiochatllm.assign("memory.del")
+async def del_memory(mem_id: Match[str], unisession: Uninfo) -> None:
+    if not chromadb:
+        await UniMessage.text("记忆系统未开启").send()
+        return
+
+    user_id = f"{unisession.scope}_{unisession.user.id}"
+    collection = chromadb.get_collection(collection_name=f"{user_id}_memories")
+
+    if not collection:
+        await UniMessage.text("未获取到记忆库").send()
+        return
+
+    if not mem_id.available:
+        await UniMessage.text("请输入记忆ID").send()
+        return
+
+    if chromadb.delete_memories(collection=collection, memory_ids=[mem_id.result]):
+        await UniMessage.text("已删除记忆").send()
+        return
+
+    await UniMessage.text("删除记忆时出现错误").send()
+    return
+
+
+@aiochatllm.assign("memory.clear")
+async def clear_memory(unisession: Uninfo) -> None:
+    if not chromadb:
+        await UniMessage.text("记忆系统未开启").send()
+        return
+
+    user_id = f"{unisession.scope}_{unisession.user.id}"
+
+    if chromadb.drop_collection(collection_name=f"{user_id}_memories"):
+        await UniMessage.text("已清空记忆").send()
+        return
+
+    await UniMessage.text("清空记忆时出现错误").send()
     return
 
 
@@ -165,9 +296,16 @@ async def set_preset(preset_name: Match[str], unisession: Uninfo) -> None:
 async def clear_context(unisession: Uninfo) -> None:
     source_id = f"{unisession.scope}_{unisession.scene.type.name}_{unisession.scene.id}"
     chat_session = chat_mgr.get_session(source_id=source_id)
-    if chat_session:
-        chat_session.clear_context()
-        await UniMessage.text("已清空上下文").send()
+
+    if not chat_session:
+        await UniMessage.text("会话不存在，无需清空").send()
         return
-    await UniMessage.text("会话不存在，无需清空").send()
+
+    chat_session.clear_context()
+    await UniMessage.text("已清空上下文").send()
+    return
+
+@aiochatllm.handle()
+async def help_text() -> None:
+    await UniMessage.text("未知命令，请输入 /aiochatllm -h 或 /llm -h 查看帮助").send()
     return

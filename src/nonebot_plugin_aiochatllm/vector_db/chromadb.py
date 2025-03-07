@@ -54,12 +54,11 @@ class OpenAILikeEmbed(EmbeddingFunction):
 class ChromaDBVector(VectorMethod):
     """ChromaDB操作类"""
 
-    def __init__(self, user_id: str, config: dict[str, Any]) -> None:
+    def __init__(self, config: dict[str, Any]) -> None:
         """初始化ChromaDB"""
-        self.user_id = user_id
         self.config = config
         self.dimension: int = self.config["embed"]["dimension"]
-        self.memory_file = store.get_data_file("nonebot_plugin_aiochatllm", f"memory_{self.user_id}")
+        self.memory_file = store.get_data_file("nonebot_plugin_aiochatllm", "memories_chromadb")
         self.chroma_client = chromadb.PersistentClient(path=str(self.memory_file))
 
     def create_or_get_collection(self, collection_name: str, schema: dict[str, Any]) -> Collection:
@@ -74,6 +73,17 @@ class ChromaDBVector(VectorMethod):
             logger.error(f"创建ChromaDB集合时出现错误: {e!s}")
             raise RuntimeError from e
         return collection
+
+    def get_collection(self, collection_name: str) -> Collection | None:
+        """获取ChromaDB集合"""
+        try:
+            collection = self.chroma_client.get_collection(
+                name=collection_name, embedding_function=OpenAILikeEmbed(**self.config["embed"])
+            )
+            return collection
+        except Exception as e:
+            logger.error(f"获取ChromaDB集合时出现错误: {e!s}")
+            return None
 
     def drop_collection(self, collection_name: str) -> bool:
         """删除ChromaDB集合"""
