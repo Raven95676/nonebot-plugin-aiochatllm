@@ -54,12 +54,11 @@ class OpenAILikeEmbed(EmbeddingFunction):
 class ChromaDBVector(VectorMethod):
     """ChromaDB操作类"""
 
-    def __init__(self, user_id: str, config: dict[str, Any]) -> None:
+    def __init__(self, config: dict[str, Any]) -> None:
         """初始化ChromaDB"""
-        self.user_id = user_id
         self.config = config
         self.dimension: int = self.config["embed"]["dimension"]
-        self.memory_file = store.get_data_file("nonebot_plugin_aiochatllm", f"memory_{self.user_id}")
+        self.memory_file = store.get_data_file("nonebot_plugin_aiochatllm", "memories_chromadb")
         self.chroma_client = chromadb.PersistentClient(path=str(self.memory_file))
 
     def create_or_get_collection(self, collection_name: str, schema: dict[str, Any]) -> Collection:

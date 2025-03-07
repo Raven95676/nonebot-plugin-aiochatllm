@@ -213,6 +213,8 @@ class ChatSession:
     def update_user_info(self, user_name: str, user_id: str) -> None:
         self.user_name = user_name
         self.user_id = user_id
+        if self.mem_mgr:
+            self.mem_mgr.update_user_info(user_id)
 
     async def cleanup_resources(self) -> None:
         """清理会话所有资源"""
