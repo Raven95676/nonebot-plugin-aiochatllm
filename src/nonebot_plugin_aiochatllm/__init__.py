@@ -289,14 +289,14 @@ async def list_session() -> None:
 
 
 @aiochatllm.assign("session.del")
-async def del_session(mem_content: Match[str], is_superuser: bool = Depends(SuperUser())) -> None:
+async def del_session(session_id: Match[str], is_superuser: bool = Depends(SuperUser())) -> None:
     if not is_superuser:
         await aiochatllm.finish("权限不足")
 
-    if not mem_content.available:
+    if not session_id.available:
         await aiochatllm.finish("请输入会话ID")
 
-    if chat_mgr.delete_session(source_id=mem_content.result):
+    if await chat_mgr.delete_session(source_id=session_id.result):
         await aiochatllm.finish("已删除会话")
 
     await aiochatllm.finish("删除会话时出现错误")
