@@ -28,7 +28,7 @@ class ChatSession:
         self.max_context_rounds = 15
         self.global_context: deque[str] = deque(maxlen=20)
         self.context: deque[dict[str, str]] = deque(maxlen=self.max_context_rounds * 2)
-        if self.config.get("summary"):
+        if self.config.get("summary") and self.config.get("embed"):
             self.mem_mgr: MemoryManager | None = MemoryManager(self.user_id, self.config)
         else:
             self.mem_mgr = None
