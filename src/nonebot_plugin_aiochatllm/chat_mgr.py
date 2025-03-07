@@ -276,7 +276,7 @@ class ChatManager:
         return session_ids
 
     async def delete_session(self, source_id: str) -> bool:
-        """删除会话,返回是否成功删除"""
+        """删除会话"""
         if source_id in self.sessions:
             session = self.sessions[source_id]
             await session.cleanup_resources()
