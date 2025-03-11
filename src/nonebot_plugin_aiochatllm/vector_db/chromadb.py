@@ -1,3 +1,4 @@
+import os
 import time
 import uuid
 from collections.abc import Mapping
@@ -13,6 +14,7 @@ from nonebot import logger
 
 from .base import VectorMethod
 
+_plugin_data_dir = store.get_plugin_data_dir()
 
 class OpenAILikeEmbed(EmbeddingFunction):
     """ChromaDB OpenAILike嵌入函数"""
@@ -58,8 +60,8 @@ class ChromaDBVector(VectorMethod):
         """初始化ChromaDB"""
         self.config = config
         self.dimension: int = self.config["embed"]["dimension"]
-        self.memory_file = store.get_data_file("nonebot_plugin_aiochatllm", "memories_chromadb")
-        self.chroma_client = chromadb.PersistentClient(path=str(self.memory_file))
+        self.memory_file = os.path.join(_plugin_data_dir, "memories_chromadb")
+        self.chroma_client = chromadb.PersistentClient(path=self.memory_file)
 
     def create_or_get_collection(self, collection_name: str, schema: dict[str, Any]) -> Collection:
         """创建或获取ChromaDB集合"""

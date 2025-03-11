@@ -1,7 +1,6 @@
 from math import ceil
-from typing import Any
 
-from nonebot import get_plugin_config, on_message, require
+from nonebot import get_plugin_config, logger, on_message, require
 
 require("nonebot_plugin_alconna")
 require("nonebot_plugin_uninfo")
@@ -44,38 +43,12 @@ __plugin_meta__ = PluginMetadata(
 
 config = get_plugin_config(Config)
 
-config_dict: dict[str, Any] = {
-    "chat": {
-        "presets": config.chat.presets,
-        "default_preset": config.chat.default_preset,
-        "model_name": config.chat.model_name,
-        "api_key": config.chat.api_key,
-        "base_url": config.chat.base_url,
-    }
-}
-
-if config.summary.model_name and config.summary.api_key and config.summary.base_url:
-    config_dict["summary"] = {
-        "model_name": config.summary.model_name,
-        "api_key": config.summary.api_key,
-        "base_url": config.summary.base_url,
-    }
-
-if config.embed.dimension and config.embed.model_name and config.embed.api_key and config.embed.base_url:
-    config_dict["embed"] = {
-        "dimension": config.embed.dimension,
-        "model_name": config.embed.model_name,
-        "api_key": config.embed.api_key,
-        "base_url": config.embed.base_url,
-    }
+config_dict = config.model_dump(exclude_none=True)
 
 censor = None
+chromadb = None
 
-if config.censor.access_key_id and config.censor.access_key_secret:
-    config_dict["censor"] = {
-        "key_id": config.censor.access_key_id,
-        "key_secret": config.censor.access_key_secret,
-    }
+if config_dict.get("censor"):
     censor = AliyunCensor(config_dict["censor"])
 
 if config_dict.get("summary") and config_dict.get("embed"):
@@ -98,6 +71,18 @@ async def handle_chat_message(event: Event, unisession: Uninfo) -> None:
     user_id, source_id, user_name = await get_session_info(unisession)
     input_text = event.get_plaintext()
 
+    if (
+        not config_dict["chat"].get("base_url")
+        or not config_dict["chat"].get("api_key")
+        or not config_dict["chat"].get("model_name")
+    ):
+        logger.error("未配置聊天模型")
+        await UniMessage.text("未配置聊天模型").send()
+        return
+
+    if not input_text:
+        return
+
     chat_session = chat_mgr.create_or_get_session(user_id=user_id, source_id=source_id, user_name=user_name)
 
     out = await chat_session.add_message(input_text)
@@ -116,6 +101,13 @@ async def handle_chat_message(event: Event, unisession: Uninfo) -> None:
 async def handle_message_store(event: Event, unisession: Uninfo) -> None:
     user_id, source_id, user_name = await get_session_info(unisession)
     input_text = event.get_plaintext()
+    if (
+        not input_text
+        or not config_dict["chat"].get("base_url")
+        or not config_dict["chat"].get("api_key")
+        or not config_dict["chat"].get("model_name")
+    ):
+        return
     chat_session = chat_mgr.create_or_get_session(user_id=user_id, source_id=source_id, user_name=user_name)
     chat_session.add_global_context(f"User named {user_name}(ID:{user_id})said: {input_text}")
 

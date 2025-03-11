@@ -1,6 +1,6 @@
 [project]
 name = "nonebot-plugin-aiochatllm"
-version = "0.1.5"
+version = "0.1.6"
 description = "All-in-One Large Model Chat Plugin"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -9,12 +9,12 @@ authors = [
 ]
 license = {text = "MIT"}
 dependencies = [
-    "nonebot2[fastapi,httpx]>=2.4.1", 
+    "nonebot2>=2.4.1", 
     "nonebot-plugin-alconna>=0.55.1", 
     "nonebot-plugin-localstore>=0.7.4", 
     "nonebot-plugin-uninfo>=0.6.10", 
     "nonebot-plugin-apscheduler>=0.5.0",
-    "httpx>=0.28.1", 
+    "httpx[http2]>=0.28.1", 
     "chromadb>=0.6.3", 
     "numpy>=2.2.3"
 ]
