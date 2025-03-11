@@ -17,8 +17,8 @@ class AliyunCensor:
 
     def __init__(self, config:dict[str, Any]) -> None:
         self.url: str = "https://green-cip.cn-shanghai.aliyuncs.com"
-        self.key_id: str = config["key_id"]
-        self.key_secret: str = config["key_secret"]
+        self.key_id: str = config["access_key_id"]
+        self.key_secret: str = config["access_key_secret"]
 
     def _split_text(self, content: str) -> list[str]:
         """极端条件下的文本分割"""
